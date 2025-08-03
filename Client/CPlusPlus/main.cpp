@@ -1,4 +1,5 @@
 #include "SocketServer.h"
+#include <atomic>
 
 std::atomic<bool> g_Running = true;
 
@@ -22,7 +23,7 @@ extern "C" __declspec( dllexport ) void StartClient()
         std::this_thread::sleep_for( std::chrono::seconds(5) );
 
         char msg[16];
-        sprintf( msg, "test %i", time );
+        sprintf( msg, "test %i\n", time );
         g_Sockets.Send( msg );
         time++;
     }

@@ -5,13 +5,16 @@
 
 #include <iostream>
 #include <thread>
-#include <atomic>
 
 #pragma comment( lib, "ws2_32.lib" )
 
 class SocketServer
 {
     public:
+
+        bool IsActive() {
+            return ( m_Socket != INVALID_SOCKET );
+        }
 
         void Shutdown();
 
@@ -21,7 +24,6 @@ class SocketServer
 
         SOCKET m_Socket = INVALID_SOCKET;
         std::thread m_Thread;
-        std::atomic<bool> m_Running = false;
 
         void TryConnect();
         void SocketThread();

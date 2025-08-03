@@ -3,7 +3,8 @@
 void SocketServer::SocketThread()
 {
     char buffer[1024];
-    while( m_Running )
+
+    while( IsActive() )
     {
         int bytes = recv( m_Socket, buffer, sizeof( buffer ), 0 );
 
@@ -14,8 +15,8 @@ void SocketServer::SocketThread()
         }
         else
         {
-            // Error o conexión cerrada
-            m_Running = false;
+            closesocket(m_Socket);
+            m_Socket = INVALID_SOCKET;
             break;
         }
     }
@@ -23,8 +24,7 @@ void SocketServer::SocketThread()
 
 void SocketServer::TryConnect()
 {
-    if( m_Running )
-        return;
+    Shutdown();
 
     WSADATA wsa;
 
@@ -36,7 +36,7 @@ void SocketServer::TryConnect()
 
     m_Socket = socket( AF_INET, SOCK_STREAM, 0 );
 
-    if( m_Socket == INVALID_SOCKET )
+    if( !IsActive() )
     {
         std::cout << "Socket creation failed.\n";
         return;
@@ -49,32 +49,30 @@ void SocketServer::TryConnect()
 
     if( connect( m_Socket, (sockaddr*)&server, sizeof( server ) ) < 0 )
     {
+        Shutdown();
         return;
     }
 
     std::cout << "Connected to CSharp Discord BOT.\n";
 
-    m_Running = true;
     m_Thread = std::thread( &SocketServer::SocketThread, this );
 }
 
 void SocketServer::Shutdown()
 {
-    if( m_Running )
+    if( m_Thread.joinable() )
     {
-        shutdown( m_Socket, SD_BOTH );
-
-        closesocket( m_Socket );
-
-        if( m_Thread.joinable() )
-        {
-            m_Thread.join();
-        }
-
-        WSACleanup();
-
-        m_Running = false;
+        m_Thread.join();
     }
+
+    if( IsActive() )
+    {
+        shutdown(m_Socket, SD_BOTH);
+        closesocket(m_Socket);
+        m_Socket = INVALID_SOCKET;
+    }
+
+    WSACleanup();
 }
 
 void SocketServer::Send( const char* message )
@@ -82,10 +80,13 @@ void SocketServer::Send( const char* message )
     if( message == nullptr || message[0] == '\0' )
         return;
 
-    if( m_Socket == INVALID_SOCKET )
+    if( !IsActive() )
     {
         TryConnect();
     }
+
+    if( !IsActive() )
+        return;
 
     int result = send( m_Socket, message, static_cast<int>( strlen( message ) ), 0 );
 
@@ -93,11 +94,6 @@ void SocketServer::Send( const char* message )
     {
         int error = WSAGetLastError();
         std::cerr << "[ERROR] failed sending string: " << error << "\n";
-
-        if( error == WSAECONNRESET || error == WSAENOTCONN || error == WSAECONNABORTED )
-        {
-            Shutdown();
-            TryConnect();
-        }
+        TryConnect();
     }
 }
