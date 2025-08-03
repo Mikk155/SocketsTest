@@ -3,11 +3,13 @@
     {
         "Server/CSharp/bin/**": true,
         "Server/CSharp/obj/**": true,
+        "Client/CPlusPlus/build/**": true,
     },
     "search.exclude":
     {
         "Server/CSharp/bin/**": true,
         "Server/CSharp/obj/**": true,
+        "Client/CPlusPlus/build/**": true,
     },
 
     "[csharp]":
