@@ -11,6 +11,11 @@ using DSharpPlus.Commands.Processors.TextCommands.Parsing;
 using System.Reflection;
 using System.Threading.Channels;
 
+enum Constants : int
+{
+    GLDSOURCE_CHAT_MAX_CHARS = 128
+};
+
 public class Program
 {
     // Start of configurable stuff

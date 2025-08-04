@@ -8,6 +8,11 @@
 
 #pragma comment( lib, "ws2_32.lib" )
 
+enum Constants : int
+{
+    GLDSOURCE_CHAT_MAX_CHARS = 128
+};
+
 class SocketServer
 {
     public:
