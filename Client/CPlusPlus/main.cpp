@@ -9,8 +9,7 @@ void SimulateGameRunning()
     g_Running = false;
 }
 
-
-extern "C" __declspec( dllexport ) void StartClient()
+int main()
 {
     std::thread waitThread( SimulateGameRunning );
 
@@ -34,4 +33,5 @@ extern "C" __declspec( dllexport ) void StartClient()
 
     g_Sockets.Shutdown();
     waitThread.join();
+    return 0;
 }

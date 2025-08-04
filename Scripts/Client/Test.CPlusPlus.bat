@@ -25,6 +25,6 @@ if %ERRORLEVEL% NEQ 0 (
 cd build
 cd Debug
 
-test.exe
+Client.exe
 
 pause
