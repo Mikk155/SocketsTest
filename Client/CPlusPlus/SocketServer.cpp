@@ -11,7 +11,7 @@ void SocketServer::SocketThread()
         if( bytes > 0 )
         {
             std::string msg( buffer, bytes );
-            std::cout << msg;
+            std::cout << "In < " << msg;
         }
         else
         {

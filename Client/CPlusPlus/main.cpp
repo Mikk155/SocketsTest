@@ -16,13 +16,17 @@ extern "C" __declspec( dllexport ) void StartClient()
 
     std::cout << "Press Enter at any moment to exit\n";
 
+    g_Sockets.Send( "Hello world from the game server!\n" );
+
     int time = 0;
 
     while( g_Running )
     {
         std::this_thread::sleep_for( std::chrono::seconds(5) );
 
-        char msg[16];
+        continue;
+
+        char msg[GLDSOURCE_CHAT_MAX_CHARS];
         sprintf( msg, "test %i\n", time );
         g_Sockets.Send( msg );
         time++;
