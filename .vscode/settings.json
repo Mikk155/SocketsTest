@@ -69,6 +69,26 @@
         "xmemory": "cpp",
         "xstddef": "cpp",
         "xtr1common": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "functional": "cpp",
+        "csignal": "cpp",
+        "list": "cpp",
+        "optional": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "xhash": "cpp",
+        "algorithm": "cpp",
+        "array": "cpp",
+        "charconv": "cpp",
+        "locale": "cpp",
+        "map": "cpp",
+        "regex": "cpp",
+        "span": "cpp",
+        "xlocbuf": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xloctime": "cpp",
+        "xtree": "cpp"
     }
 }
