@@ -69,6 +69,11 @@ class SocketClient
 
     public:
 
+        ~SocketClient()
+        {
+            Shutdown();
+        }
+
         /**
          * @brief Setup socket client
          * 
