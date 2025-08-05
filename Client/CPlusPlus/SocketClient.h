@@ -34,6 +34,7 @@
 #include <functional>
 #include <optional>
 #include <atomic>
+#include <algorithm>
 
 #pragma once
 
@@ -44,7 +45,6 @@
 #else
 // -🐧
 #endif
-#include <algorithm>
 
 class SocketClient
 {
@@ -69,7 +69,15 @@ class SocketClient
 
     public:
 
-        void Setup( std::string _Address, int _Port, int _RecBufferSize, std::optional<SocketCallback> _RecCallback = std::nullopt )
+        /**
+         * @brief Setup socket client
+         * 
+         * @param _Address 
+         * @param _Port 
+         * @param _RecBufferSize Buffer max size clamp for incoming sockets
+         * @param _RecCallback Callback for incoming sockets
+         */
+        virtual void Setup( std::string _Address, int _Port, int _RecBufferSize, std::optional<SocketCallback> _RecCallback = std::nullopt )
         {
             Address = _Address;
             Port = _Port;
@@ -88,7 +96,7 @@ class SocketClient
             TryConnect();
         }
 
-        void CloseThread()
+        virtual void CloseThread()
         {
             if( RecCallback.has_value() && m_Thread.joinable() && std::this_thread::get_id() != m_Thread.get_id() )
             {
@@ -99,7 +107,7 @@ class SocketClient
             }
         }
 
-        void Shutdown()
+        virtual void Shutdown()
         {
             CloseThread();
 
@@ -124,7 +132,7 @@ class SocketClient
         /**
          * @brief Return whatever the client socket is currently active and has connection to the server
          */
-        bool IsActive()
+        virtual bool IsActive()
         {
 #ifdef _WIN32
             return ( m_Socket != INVALID_SOCKET );
@@ -136,7 +144,7 @@ class SocketClient
         /**
          * @brief Send a message to the server socket. if we're not connected it will attempt to connect first.
          */
-        void Send( const char* message )
+        virtual void Send( const char* message )
         {
             if( message == nullptr || message[0] == '\0' )
                 return;
@@ -171,7 +179,7 @@ class SocketClient
         /**
          * @brief Send a message to the server socket. if we're not connected it will attempt to connect first.
          */
-        void Send( const std::string& message )
+        virtual void Send( const std::string& message )
         {
             if( !message.empty() )
             {
@@ -182,7 +190,7 @@ class SocketClient
         /**
          * @brief Shutdown connection if any and attempt to connect
          */
-        void TryConnect()
+        virtual void TryConnect()
         {
             Shutdown();
 
@@ -231,7 +239,7 @@ class SocketClient
 
     protected:
 
-        void SocketThread()
+        virtual void SocketThread()
         {
             char buffer[SO_MAX_MSG_SIZE];
 
@@ -259,7 +267,7 @@ class SocketClient
         /**
          * @brief Print a message to console, overide method to print to the game message system
          */
-        void print( const char* message )
+        virtual void print( const char* message )
         {
             std::cout << "[SocketClient] " << message << std::endl;
         }
