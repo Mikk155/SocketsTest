@@ -219,9 +219,11 @@ class SocketClient
             server.sin_port = htons( Port );
             server.sin_addr.s_addr = inet_addr( Address.c_str() );
 
-            if( connect( m_Socket, (sockaddr*)&server, sizeof( server ) ) < 0 )
+            if( int result = connect( m_Socket, (sockaddr*)&server, sizeof( server ) ); result < 0 )
             {
-                print( "Failed to connect to a server" );
+                char buffer[256];
+                sprintf( buffer, "Failed to connect to a server: %i", result );
+                print( buffer );
                 Shutdown();
                 return;
             }
