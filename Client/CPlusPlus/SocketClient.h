@@ -46,6 +46,8 @@
 // -🐧
 #endif
 
+std::atomic<bool> _SOCKET_ONLINE{false};
+
 class SocketClient
 {
     using SocketCallback = std::function<void( const std::string& )>;
@@ -56,8 +58,6 @@ class SocketClient
         int Port;
         int RecBufferSize;
         std::optional<SocketCallback> RecCallback;
-
-        std::atomic<bool> m_Online{false};
 
         std::thread m_Thread;
 
@@ -124,10 +124,10 @@ class SocketClient
                 m_Socket = INVALID_SOCKET;
             }
 
-            if( m_Online )
+            if( _SOCKET_ONLINE )
             {
                 WSACleanup();
-                m_Online = false;
+                _SOCKET_ONLINE = false;
             }
 #else
 // -🐧
@@ -208,7 +208,7 @@ class SocketClient
                 return;
             }
 
-            m_Online = true;
+            _SOCKET_ONLINE = true;
 
             m_Socket = socket( AF_INET, SOCK_STREAM, 0 );
 
