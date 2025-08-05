@@ -88,13 +88,20 @@ class SocketClient
             TryConnect();
         }
 
-        void Shutdown()
+        void CloseThread()
         {
             if( RecCallback.has_value() && m_Thread.joinable() && std::this_thread::get_id() != m_Thread.get_id() )
             {
-                m_Thread.join();
+                try {
+                    m_Thread.join();
+                } catch (...) {}
                 m_Thread = std::thread();
             }
+        }
+
+        void Shutdown()
+        {
+            CloseThread();
 
 #ifdef _WIN32
             if( IsActive() )
@@ -217,11 +224,7 @@ class SocketClient
 
             if( RecCallback.has_value() )
             {
-                if( m_Thread.joinable() )
-                {
-                    m_Thread.join();
-                }
-
+                CloseThread();
                 m_Thread = std::thread( &SocketClient::SocketThread, this );
             }
         }
