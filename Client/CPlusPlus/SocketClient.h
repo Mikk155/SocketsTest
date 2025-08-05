@@ -62,7 +62,7 @@ class SocketClient
         std::thread m_Thread;
 
 #ifdef _WIN32
-        SOCKET m_Socket = INVALID_SOCKET;
+        std::atomic<SOCKET> m_Socket = INVALID_SOCKET;
 #else
 // -🐧
 #endif
@@ -124,7 +124,7 @@ class SocketClient
         /**
          * @brief Return whatever the client socket is currently active and has connection to the server
          */
-        const bool IsActive()
+        bool IsActive()
         {
 #ifdef _WIN32
             return ( m_Socket != INVALID_SOCKET );
