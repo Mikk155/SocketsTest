@@ -35,6 +35,7 @@
 #include <optional>
 #include <atomic>
 #include <algorithm>
+#include <mutex>
 
 #pragma once
 
@@ -47,6 +48,7 @@
 #endif
 
 inline std::atomic<bool> _SOCKET_ONLINE{false};
+std::mutex _SOCKET_MUTEX;
 
 class SocketClient
 {
@@ -136,6 +138,8 @@ class SocketClient
 
         virtual void Disconnect()
         {
+            std::lock_guard<std::mutex> lock(_SOCKET_MUTEX);
+
             CloseThread();
 
 #ifdef _WIN32

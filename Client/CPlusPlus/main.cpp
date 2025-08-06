@@ -28,6 +28,7 @@
 
 // Simulate a game server running syncronously
 std::atomic<bool> g_GameServerRunning;
+std::mutex _STOP_GAME;
 
 inline SocketClient g_Sockets;
 
@@ -51,6 +52,7 @@ int main()
         {
             if( line == "quit" )
             {
+                std::lock_guard<std::mutex> lock(_STOP_GAME);
                 g_GameServerRunning = false;
                 break;
             }
