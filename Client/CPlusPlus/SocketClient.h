@@ -39,13 +39,9 @@
 
 #pragma once
 
-#ifdef _WIN32
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <winsock2.h>
 #pragma comment( lib, "ws2_32.lib" )
-#else
-// -🐧
-#endif
 
 inline std::atomic<bool> _SOCKET_ONLINE{false};
 std::mutex _SOCKET_MUTEX;
@@ -63,11 +59,7 @@ class SocketClient
 
         std::thread m_Thread;
 
-#ifdef _WIN32
         SOCKET m_Socket = INVALID_SOCKET;
-#else
-// -🐧
-#endif
 
     public:
 
@@ -100,10 +92,6 @@ class SocketClient
                 print( "No external callback method set. this client won't receive messages." );
             }
 
-#ifdef _WIN32
-#else
-// -🐧
-#endif
             TryConnect();
         }
 
@@ -112,7 +100,6 @@ class SocketClient
             if( _SOCKET_ONLINE )
                 return;
 
-#ifdef _WIN32
             WSADATA wsa;
 
             if( WSAStartup( MAKEWORD( 2, 2 ), &wsa ) != 0 )
@@ -120,11 +107,7 @@ class SocketClient
                 print( "WSAStartup failed." );
                 return;
             }
-
             _SOCKET_ONLINE = true;
-#else
-// -🐧
-#endif
         }
         virtual void CloseThread()
         {
@@ -142,31 +125,23 @@ class SocketClient
 
             CloseThread();
 
-#ifdef _WIN32
             if( IsActive() )
             {
                 shutdown(m_Socket, SD_BOTH);
                 closesocket(m_Socket);
                 m_Socket = INVALID_SOCKET;
             }
-#else
-// -🐧
-#endif
         }
 
         virtual void Shutdown()
         {
             Disconnect();
 
-#ifdef _WIN32
             if( _SOCKET_ONLINE )
             {
                 WSACleanup();
                 _SOCKET_ONLINE = false;
             }
-#else
-// -🐧
-#endif
         }
 
         /**
@@ -174,11 +149,7 @@ class SocketClient
          */
         virtual bool IsActive() const
         {
-#ifdef _WIN32
             return ( m_Socket != INVALID_SOCKET );
-#else
-// -🐧
-#endif
         }
 
         /**
@@ -191,7 +162,6 @@ class SocketClient
                 return;
             }
 
-#ifdef _WIN32
             if( !_SOCKET_ONLINE )
             {
                 StartWSA();
@@ -201,9 +171,6 @@ class SocketClient
                     return;
                 }
             }
-#else
-// -🐧
-#endif
 
             if( !IsActive() )
             {
@@ -213,7 +180,6 @@ class SocketClient
             if( !IsActive() )
                 return;
 
-#ifdef _WIN32
             int result = send( m_Socket, message, static_cast<int>( strlen( message ) ), 0 );
 
             if( result == SOCKET_ERROR )
@@ -227,9 +193,6 @@ class SocketClient
 
                 Disconnect();
             }
-#else
-// -🐧
-#endif
         }
 
         /**
@@ -250,7 +213,6 @@ class SocketClient
         {
             Disconnect();
 
-#ifdef _WIN32
             m_Socket = socket( AF_INET, SOCK_STREAM, 0 );
 
             if( !IsActive() )
@@ -273,9 +235,6 @@ class SocketClient
                 Disconnect();
                 return;
             }
-#else
-// -🐧
-#endif
             print( "Connected to a server" );
 
             if( RecCallback.has_value() )
@@ -296,8 +255,9 @@ class SocketClient
                 if( !RecCallback.has_value() )
                     break;
 
-#ifdef _WIN32
-                if( int bytes = recv( m_Socket, buffer, RecBufferSize, 0 ); bytes > 0 )
+                int bytes = recv( m_Socket, buffer, RecBufferSize, 0 );
+
+                if( bytes > 0 )
                 {
                     std::string msg( buffer, bytes );
 
@@ -314,9 +274,6 @@ class SocketClient
                     Disconnect();
                     break;
                 }
-#else
-// -🐧
-#endif
             }
         }
 
