@@ -25,6 +25,7 @@
 #include "SocketClient.h"
 
 #include <csignal>
+#include <nlohmann/json.hpp>
 
 // Simulate a game server running syncronously
 std::atomic<bool> g_GameServerRunning;
@@ -36,6 +37,8 @@ void MyMessageHandler( const std::string& message )
 {
     std::cout << message << std::endl;;
 }
+
+using json = nlohmann::json;
 
 int main()
 {
