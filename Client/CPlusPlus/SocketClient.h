@@ -46,7 +46,7 @@
 // -🐧
 #endif
 
-std::atomic<bool> _SOCKET_ONLINE{false};
+inline std::atomic<bool> _SOCKET_ONLINE{false};
 
 class SocketClient
 {
@@ -62,7 +62,7 @@ class SocketClient
         std::thread m_Thread;
 
 #ifdef _WIN32
-        std::atomic<SOCKET> m_Socket = INVALID_SOCKET;
+        SOCKET m_Socket = INVALID_SOCKET;
 #else
 // -🐧
 #endif
@@ -89,7 +89,7 @@ class SocketClient
             RecBufferSize = std::clamp( _RecBufferSize, 1, SO_MAX_MSG_SIZE );
             RecCallback = _RecCallback;
 
-            char buffer[256];
+            char buffer[128];
             sprintf( buffer, "Setup at %s:%i with incoming buffer of %i", Address.c_str(), Port, RecBufferSize );
             print( buffer );
 
@@ -98,9 +98,32 @@ class SocketClient
                 print( "No external callback method set. this client won't receive messages." );
             }
 
+#ifdef _WIN32
+#else
+// -🐧
+#endif
             TryConnect();
         }
 
+        virtual void StartWSA()
+        {
+            if( _SOCKET_ONLINE )
+                return;
+
+#ifdef _WIN32
+            WSADATA wsa;
+
+            if( WSAStartup( MAKEWORD( 2, 2 ), &wsa ) != 0 )
+            {
+                print( "WSAStartup failed." );
+                return;
+            }
+
+            _SOCKET_ONLINE = true;
+#else
+// -🐧
+#endif
+        }
         virtual void CloseThread()
         {
             if( RecCallback.has_value() && m_Thread.joinable() && std::this_thread::get_id() != m_Thread.get_id() )
@@ -108,11 +131,10 @@ class SocketClient
                 try {
                     m_Thread.join();
                 } catch (...) {}
-                m_Thread = std::thread();
             }
         }
 
-        virtual void Shutdown()
+        virtual void Disconnect()
         {
             CloseThread();
 
@@ -123,7 +145,16 @@ class SocketClient
                 closesocket(m_Socket);
                 m_Socket = INVALID_SOCKET;
             }
+#else
+// -🐧
+#endif
+        }
 
+        virtual void Shutdown()
+        {
+            Disconnect();
+
+#ifdef _WIN32
             if( _SOCKET_ONLINE )
             {
                 WSACleanup();
@@ -137,7 +168,7 @@ class SocketClient
         /**
          * @brief Return whatever the client socket is currently active and has connection to the server
          */
-        virtual bool IsActive()
+        virtual bool IsActive() const
         {
 #ifdef _WIN32
             return ( m_Socket != INVALID_SOCKET );
@@ -152,7 +183,23 @@ class SocketClient
         virtual void Send( const char* message )
         {
             if( message == nullptr || message[0] == '\0' )
+            {
                 return;
+            }
+
+#ifdef _WIN32
+            if( !_SOCKET_ONLINE )
+            {
+                StartWSA();
+
+                if( !_SOCKET_ONLINE )
+                {
+                    return;
+                }
+            }
+#else
+// -🐧
+#endif
 
             if( !IsActive() )
             {
@@ -169,12 +216,12 @@ class SocketClient
             {
                 int error = WSAGetLastError();
 
-                char buffer[256];
+                char buffer[48];
                 sprintf( buffer, "Error sending string: %i for message:", error );
                 print( buffer );
                 print( message );
 
-                Shutdown();
+                Disconnect();
             }
 #else
 // -🐧
@@ -197,25 +244,15 @@ class SocketClient
          */
         virtual void TryConnect()
         {
-            Shutdown();
+            Disconnect();
 
 #ifdef _WIN32
-            WSADATA wsa;
-
-            if( WSAStartup( MAKEWORD( 2, 2 ), &wsa ) != 0 )
-            {
-                print( "WSAStartup failed." );
-                return;
-            }
-
-            _SOCKET_ONLINE = true;
-
             m_Socket = socket( AF_INET, SOCK_STREAM, 0 );
 
             if( !IsActive() )
             {
                 print( "Socket creation failed." );
-                Shutdown();
+                Disconnect();
                 return;
             }
 
@@ -226,10 +263,10 @@ class SocketClient
 
             if( int result = connect( m_Socket, (sockaddr*)&server, sizeof( server ) ); result < 0 )
             {
-                char buffer[256];
+                char buffer[48];
                 sprintf( buffer, "Failed to connect to a server: %i", result );
                 print( buffer );
-                Shutdown();
+                Disconnect();
                 return;
             }
 #else
@@ -252,6 +289,9 @@ class SocketClient
 
             while( IsActive() )
             {
+                if( !RecCallback.has_value() )
+                    break;
+
 #ifdef _WIN32
                 if( int bytes = recv( m_Socket, buffer, RecBufferSize, 0 ); bytes > 0 )
                 {
@@ -259,10 +299,15 @@ class SocketClient
 
                     RecCallback.value()(msg);
                 }
+                else if( WSAGetLastError() == WSAECONNRESET )
+                {
+                    Disconnect();
+                    break;
+                }
                 else
                 {
-                    closesocket(m_Socket);
-                    m_Socket = INVALID_SOCKET;
+                    print( "recv() failed" );
+                    Disconnect();
                     break;
                 }
 #else
