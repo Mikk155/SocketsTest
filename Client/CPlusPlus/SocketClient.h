@@ -48,7 +48,9 @@ std::mutex _SOCKET_MUTEX;
 
 class SocketClient
 {
-    using SocketCallback = std::function<void( const std::string& )>;
+    public:
+
+        using SocketCallback = std::function<void( const std::string& )>;
 
     protected:
 

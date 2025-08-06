@@ -12,21 +12,32 @@ using DSharpPlus.Commands;
 using DSharpPlus.Commands.Processors.TextCommands;
 using DSharpPlus.Commands.Processors.TextCommands.Parsing;
 
-public class Program
+public class GameServer( string ID, string Name, ulong Channel )
 {
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+    public readonly string ID = ID;
+    public readonly string Name = Name;
+    public readonly ulong Channel = Channel;
+
+    public List<string> DiscordMessages = new();
+
+    public TcpClient? client;
+};
+
+public static class Program
+{
+// Non-nullable field must contain a non-null value when exiting constructor.
+#pragma warning disable CS8618
     private static DiscordClient Bot;
     private static ulong GUILD_ID;
-    private static List<ulong> CHANNELS;
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+#pragma warning restore CS8618
 
     private static string? Prefix;
     private static CommandsExtension? Commands;
 
+    private static List<GameServer> Servers = new List<GameServer>();
+
     private static List<TcpClient> Clients = new List<TcpClient>();
     private static object LockObj = new object();
-
-    private static List<string> DiscordMessages = new();
 
     public static async Task Main( string[] args )
     {
@@ -41,12 +52,6 @@ public class Program
 #pragma warning disable CS8604 // Possible null reference argument.
 
             GUILD_ID = (ulong)ConfigContext.GetValue( "guild" );
-            CHANNELS = ConfigContext[ "channels" ]?.Select( x => (ulong)x )!.ToList() ?? new();
-
-            if( CHANNELS.Count <= 0 )
-            {
-                throw new ArgumentException( "No channels given on the json config!" );
-            }
 
             DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(
                 File.ReadAllText(
@@ -58,6 +63,15 @@ public class Program
             builder.ConfigureEventHandlers( b => b
                 .HandleMessageCreated( OnMessage )
             );
+
+            foreach( JObject? srv in ConfigContext[ "servers" ] )
+            {
+                Servers.Add( new GameServer(
+                    srv[ "ID" ].ToString(),
+                    srv[ "name" ].ToString(),
+                    (ulong)srv[ "channel" ]
+                ) );
+            }
 
             Prefix = ConfigContext[ "prefix" ]?.ToString();
 
@@ -131,36 +145,34 @@ public class Program
         if( e.Guild.Id != GUILD_ID )
             return;
 
-        if( !CHANNELS.Contains( e.Channel.Id ) )
+        GameServer? server = Servers.Where( srv => srv.Channel == e.Channel.Id ).FirstOrDefault();
+
+        if( server is null )
             return;
 
-        DiscordMessages.Add( $"[Discord] {e.Author.Username}: {e.Message.Content}\n" );
+        server.DiscordMessages.Add( $"[Discord] {e.Author.Username}: {e.Message.Content}\n" );
     }
 
     static void SendToGameServer()
     {
         while( true )
         {
-            lock( LockObj )
+            foreach( GameServer server in Servers )
             {
-                if( DiscordMessages.Count > 0 )
+                if( server.client is null )
+                    continue;
+
+                if( server.DiscordMessages.Count > 0 )
                 {
-                    string DiscordMessage = DiscordMessages[0];
-                    DiscordMessages.RemoveAt(0);
+                    NetworkStream stream = server.client.GetStream();
 
-                    byte[] Buffer = Encoding.UTF8.GetBytes( DiscordMessage );
-
-                    foreach( TcpClient Client in Clients.ToList() )
+                    lock( LockObj )
                     {
-                        try
-                        {
-                            NetworkStream stream = Client.GetStream();
-                            stream.Write( Buffer, 0, Buffer.Length );
-                        }
-                        catch
-                        {
-                            RemoveClient( Client );
-                        }
+                        string DiscordMessage = server.DiscordMessages[0];
+                        server.DiscordMessages.RemoveAt(0);
+
+                        byte[] Buffer = Encoding.UTF8.GetBytes( DiscordMessage );
+                        stream.Write( Buffer, 0, Buffer.Length );
                     }
                 }
             }
@@ -183,10 +195,35 @@ public class Program
                     break;
 
                 string message = Encoding.UTF8.GetString( Buffer, 0, bytes );
+
+                GameServer? server = Servers.Where( srv => srv.client is not null && srv.client == Client ).FirstOrDefault();
+
+                if( server is null )
+                {
+                    if( message.StartsWith( "login" ) )
+                    {
+                        string ID = message[6..];
+                        server = Servers.Where( srv => srv.ID == ID ).FirstOrDefault();
+
+                        if( server is not null )
+                        {
+                            message = $"Server \"{ID}\" online";
+                            server.client = Client;
+                        }
+                    }
+                }
+
+                if( server is null )
+                {
+                    byte[] Tell = Encoding.UTF8.GetBytes( $"{{ \"error\": \"Server ID \\\"{message}\\\" not found on C#'s config context.\"}}" );
+                    stream.Write( Tell, 0, Tell.Length );
+                    break;
+                }
+
                 _ = Task.Run( async () =>
                 {
                     DiscordGuild Guild = await Bot.GetGuildAsync( GUILD_ID );
-                    DiscordChannel Channel = await Guild.GetChannelAsync( CHANNELS.First() );
+                    DiscordChannel Channel = await Guild.GetChannelAsync( server.Channel );
                     await Channel.SendMessageAsync( message );
                 } );
             }
@@ -202,6 +239,14 @@ public class Program
     {
         lock( LockObj )
         {
+            foreach( GameServer server in Servers )
+            {
+                if( server.client is not null && server.client == Client )
+                {
+                    server.client = null;
+                }
+            }
+
             Clients.Remove( Client );
 
             try

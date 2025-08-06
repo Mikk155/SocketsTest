@@ -91,6 +91,23 @@
         "xloctime": "cpp",
         "xtree": "cpp",
         "mutex": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "any": "cpp",
+        "codecvt": "cpp",
+        "cstdarg": "cpp",
+        "deque": "cpp",
+        "filesystem": "cpp",
+        "format": "cpp",
+        "forward_list": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp",
+        "numeric": "cpp",
+        "random": "cpp",
+        "ranges": "cpp",
+        "set": "cpp",
+        "sstream": "cpp",
+        "unordered_set": "cpp",
+        "valarray": "cpp",
+        "variant": "cpp"
     }
 }

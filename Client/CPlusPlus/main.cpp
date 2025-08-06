@@ -27,18 +27,48 @@
 #include <csignal>
 #include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
+
 // Simulate a game server running syncronously
 std::atomic<bool> g_GameServerRunning;
 std::mutex _STOP_GAME;
 
-inline SocketClient g_Sockets;
+class SvenSocketClient : public SocketClient
+{
+    public:
+
+        void Setup( std::string _Address, int _Port, int _RecBufferSize, std::optional<SocketClient::SocketCallback> _RecCallback = std::nullopt ) override
+        {
+            SocketClient::Setup( _Address, _Port, _RecBufferSize, _RecCallback );
+            Send( "login xp1" );
+        }
+};
+
+inline SvenSocketClient g_Sockets;
 
 void MyMessageHandler( const std::string& message )
 {
-    std::cout << message << std::endl;;
-}
+    if( message[0] == '{' )
+    {
+        try
+        {
+            json input = json::parse( message );
 
-using json = nlohmann::json;
+            if( input.contains( "error" ) )
+            {
+                std::cerr << "Socket server error: " << input[ "error" ].get<std::string>() << std::endl;
+            }
+        }
+        catch( const json::parse_error& e )
+        {
+            std::cerr << "Parse error: " << e.what() << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << message << std::endl;;
+    }
+}
 
 struct CBasePlayer
 {
