@@ -12,11 +12,6 @@ using DSharpPlus.Commands;
 using DSharpPlus.Commands.Processors.TextCommands;
 using DSharpPlus.Commands.Processors.TextCommands.Parsing;
 
-enum Constants : int
-{
-    GLDSOURCE_CHAT_MAX_CHARS = 128
-};
-
 public class Program
 {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
@@ -176,13 +171,13 @@ public class Program
     static void HandleClient( TcpClient Client )
     {
         NetworkStream stream = Client.GetStream();
-        byte[] Buffer = new byte[(int)Constants.GLDSOURCE_CHAT_MAX_CHARS];
+        byte[] Buffer = new byte[8192];
 
         while( true )
         {
             try
             {
-                int bytes = stream.Read( Buffer, 0, (int)Constants.GLDSOURCE_CHAT_MAX_CHARS );
+                int bytes = stream.Read( Buffer, 0, 8192 );
 
                 if( bytes == 0 )
                     break;
